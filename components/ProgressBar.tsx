@@ -12,7 +12,10 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ progress }) => {
         <div className="flex items-center gap-3">
           <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
           <span className="text-[11px] font-black text-white uppercase tracking-[0.8em]">
-            INITIALIZING_MARKET_LOGIC
+            {progress < 25 ? 'ACCESSING_REDDIT_API' : 
+             progress < 50 ? 'PARSING_WSO_FORUMS' :
+             progress < 75 ? 'LINKEDIN_GRAPH_SYNC' :
+             'GLASSDOOR_SALARY_DATA'}
           </span>
         </div>
         <span className="text-[10px] font-mono text-gray-600 tracking-widest">
@@ -35,11 +38,16 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ progress }) => {
       
       <div className="flex justify-between items-center px-2">
         <div className="flex gap-6">
-           {['REDDIT', 'WSO', 'LI', 'GD'].map((site, i) => (
-             <div key={site} className={`text-[8px] font-black tracking-[0.4em] transition-colors duration-700 ${progress > (25 * (i)) ? 'text-indigo-500/80' : 'text-gray-800'}`}>
-               {site}
-             </div>
-           ))}
+           {['REDDIT', 'WSO', 'LI', 'GD'].map((site, i) => {
+             const isActive = progress >= (i * 25) && progress < ((i + 1) * 25);
+             const isDone = progress >= ((i + 1) * 25);
+             
+             return (
+               <div key={site} className={`text-[8px] font-black tracking-[0.4em] transition-all duration-300 ${isActive ? 'text-white scale-110 animate-pulse' : isDone ? 'text-indigo-500' : 'text-gray-800'}`}>
+                 {site}
+               </div>
+             );
+           })}
         </div>
         <div className="text-[8px] text-gray-800 font-black tracking-widest">
           GROUNDING_ACTIVE
