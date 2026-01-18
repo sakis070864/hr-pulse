@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { AppState, ViewMode, InterviewQuestion } from './types';
-import { searchInterviewQuestions } from './services/geminiService';
+import { searchInterviewQuestions, fetchAllIntelligence, batchFetchMasterclasses } from './services/geminiService';
 import Header from './components/Header';
 import SearchForm from './components/SearchForm';
 import ProgressBar from './components/ProgressBar';
@@ -93,7 +93,21 @@ const App: React.FC = () => {
   };
 
   const handleSearch = async (jobTitle: string, location: string) => {
-    setState(prev => ({ ...prev, jobTitle, location, isSearching: true, isLoadingMore: false, searchProgress: 0, error: null }));
+    setState(prev => ({ 
+      ...prev, 
+      jobTitle, 
+      location, 
+      isSearching: true, 
+      isLoadingMore: false, 
+      searchProgress: 0, 
+      error: null,
+      // Clear old cache on new search
+      careerPathData: undefined,
+      salaryData: undefined,
+      networkingData: undefined,
+      masterclassCache: undefined
+    }));
+    
     const interval = setInterval(() => {
       setState(prev => {
         const inc = prev.searchProgress > 80 ? (Math.random() * 0.5) : (Math.random() * 5);
@@ -102,9 +116,29 @@ const App: React.FC = () => {
     }, 150);
 
     try {
-      const results = await searchInterviewQuestions(jobTitle, location, NUM_INITIAL_QUESTIONS, 0);
+      // Step 1: Get Questions first (we need them to fetch masterclasses)
+      const questions = await searchInterviewQuestions(jobTitle, location, NUM_INITIAL_QUESTIONS, 0);
+
+      // Step 2: Parallel Execution - Get ALL Deep Intelligence
+      // We fetch Auxiliary Data AND Masterclass Content for ALL questions simultaneously
+      const [intelligence, masterclassCache] = await Promise.all([
+        fetchAllIntelligence(jobTitle, location),
+        batchFetchMasterclasses(questions, jobTitle, location)
+      ]);
+
       clearInterval(interval);
-      setState(prev => ({ ...prev, questions: results, isSearching: false, searchProgress: 100 }));
+      
+      setState(prev => ({ 
+        ...prev, 
+        questions, 
+        isSearching: false, 
+        searchProgress: 100,
+        careerPathData: intelligence.careerPath,
+        salaryData: intelligence.salary,
+        networkingData: intelligence.networking,
+        masterclassCache // Store the giant cache
+      }));
+      
       setTimeout(() => setViewMode('RESULTS'), 500);
     } catch (err: any) {
       clearInterval(interval);
@@ -137,6 +171,16 @@ const App: React.FC = () => {
         setState(prev => {
           const currentSet = new Set(prev.questions.map(q => q.question.trim().toLowerCase()));
           const uniqueMoreResults = moreResults.filter(q => !currentSet.has(q.question.trim().toLowerCase()));
+
+          // SHADOW SYNC: Trigger background fetch for the new unique questions
+          if (uniqueMoreResults.length > 0) {
+            batchFetchMasterclasses(uniqueMoreResults, state.jobTitle, state.location).then(newCache => {
+               setState(currentState => ({
+                 ...currentState,
+                 masterclassCache: { ...currentState.masterclassCache, ...newCache }
+               }));
+            });
+          }
 
           return {
             ...prev,
@@ -301,11 +345,11 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {viewMode === 'CAREER_PATH' && <CareerPathView jobTitle={state.jobTitle} location={state.location} onBack={() => setViewMode('RESULTS')} />}
-        {viewMode === 'SALARY_INSIGHTS' && <SalaryInsightsView jobTitle={state.jobTitle} location={state.location} onBack={() => setViewMode('RESULTS')} />}
-        {viewMode === 'NETWORKING' && <NetworkingView jobTitle={state.jobTitle} location={state.location} onBack={() => setViewMode('RESULTS')} />}
+        {viewMode === 'CAREER_PATH' && <CareerPathView jobTitle={state.jobTitle} location={state.location} onBack={() => setViewMode('RESULTS')} cachedData={state.careerPathData} />}
+        {viewMode === 'SALARY_INSIGHTS' && <SalaryInsightsView jobTitle={state.jobTitle} location={state.location} onBack={() => setViewMode('RESULTS')} cachedData={state.salaryData} />}
+        {viewMode === 'NETWORKING' && <NetworkingView jobTitle={state.jobTitle} location={state.location} onBack={() => setViewMode('RESULTS')} cachedData={state.networkingData} />}
 
-        {viewMode === 'MASTERCLASS' && selectedQuestion && <MasterclassView question={selectedQuestion} jobTitle={state.jobTitle} location={state.location} onBack={() => setViewMode('RESULTS')} />}
+        {viewMode === 'MASTERCLASS' && selectedQuestion && <MasterclassView question={selectedQuestion} jobTitle={state.jobTitle} location={state.location} onBack={() => setViewMode('RESULTS')} cachedData={state.masterclassCache?.[selectedQuestion.id]} />}
         {viewMode === 'TRAINING' && selectedQuestion && <TrainingView question={selectedQuestion} jobTitle={state.jobTitle} onBack={() => setViewMode('RESULTS')} onComplete={(status) => handleUpdateQuestionStatus(selectedQuestion.id, status)} />}
         {viewMode === 'SIMULATION' && selectedQuestion && <SimulationView question={selectedQuestion} jobTitle={state.jobTitle} onBack={() => setViewMode('RESULTS')} />}
       </main>

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { InterviewQuestion } from '../types';
-import { getGeminiClient, encode, decode, decodeAudioData } from '../services/geminiService';
+import { InterviewQuestion, SimulationReport } from '../types';
+import { getGeminiClient, encode, decode, decodeAudioData, generateSimulationReport } from '../services/geminiService';
 import { Modality, LiveServerMessage } from '@google/genai';
 
 interface SimulationViewProps {
@@ -13,6 +13,10 @@ interface SimulationViewProps {
 const SimulationView: React.FC<SimulationViewProps> = ({ question, jobTitle, onBack }) => {
   const [status, setStatus] = useState<'IDLE' | 'PERMISSIONS' | 'CONNECTING' | 'ACTIVE' | 'ERROR'>('IDLE');
   const [transcript, setTranscript] = useState<string[]>([]);
+  const [report, setReport] = useState<SimulationReport | null>(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [isRecording, setIsRecording] = useState(false); // New state variable
+  const [userTranscript, setUserTranscript] = useState<string>(''); // New state variable
   
   const outputAudioContextRef = useRef<AudioContext | null>(null);
   const inputAudioContextRef = useRef<AudioContext | null>(null);
@@ -22,6 +26,8 @@ const SimulationView: React.FC<SimulationViewProps> = ({ question, jobTitle, onB
   const streamRef = useRef<MediaStream | null>(null);
 
   const startSimulation = async () => {
+    // Reset report when starting new simulation
+    setReport(null);
     setStatus('PERMISSIONS');
     
     try {
@@ -121,7 +127,7 @@ const SimulationView: React.FC<SimulationViewProps> = ({ question, jobTitle, onB
     }
   };
 
-  const endSimulation = () => {
+  const endSimulation = async () => {
     // 1. Clean up Input Audio (Stop recording immediately)
     if (inputAudioContextRef.current) {
       inputAudioContextRef.current.close().catch(() => {});
@@ -150,8 +156,85 @@ const SimulationView: React.FC<SimulationViewProps> = ({ question, jobTitle, onB
     sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
     sourcesRef.current.clear();
 
-    onBack();
+    // 6. Generate Report
+    setStatus('IDLE');
+    setIsGeneratingReport(true);
+    try {
+      if (transcript.length > 0) {
+        const result = await generateSimulationReport(transcript, jobTitle);
+        setReport(result);
+      } else {
+        // No transcript, just go back
+        onBack();
+      }
+    } catch (e) {
+      console.error(e);
+      // Fallback if report fails
+      onBack();
+    } finally {
+      setIsGeneratingReport(false);
+    }
   };
+
+  if (isGeneratingReport) return (
+    <div className="max-w-3xl mx-auto glass p-10 rounded-[2.5rem] border border-white/10 min-h-[70vh] flex flex-col items-center justify-center text-center">
+      <div className="w-16 h-16 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+      <h2 className="text-2xl font-bold text-white mb-2">Compiling Post-Interview Report...</h2>
+      <p className="text-gray-400 text-sm">Analyzing communication patterns and technical depth</p>
+    </div>
+  );
+
+  if (report) return (
+    <div className="max-w-4xl mx-auto glass p-12 rounded-[2.5rem] border border-white/10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+       <button onClick={onBack} className="text-gray-500 hover:text-white mb-8 font-bold text-sm uppercase tracking-widest">← Back to Terminal</button>
+       
+       <div className="flex flex-col md:flex-row items-center gap-12 mb-12">
+         <div className={`relative w-40 h-40 rounded-full flex items-center justify-center border-8 ${report.score >= 60 ? 'border-green-500/20' : 'border-red-500/20'}`}>
+           <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+             <circle cx="50" cy="50" r="46" fill="none" strokeWidth="8" className={report.score >= 60 ? 'stroke-green-500' : 'stroke-red-500'} strokeDasharray="289.02652413026095" strokeDashoffset={289.02652413026095 - (289.02652413026095 * report.score) / 100} strokeLinecap="round" />
+           </svg>
+           <div className="text-center">
+             <span className={`text-5xl font-black ${report.score >= 60 ? 'text-green-400' : 'text-red-400'}`}>{report.score}</span>
+             <span className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">Score</span>
+           </div>
+         </div>
+         
+         <div className="flex-1">
+           <h2 className="text-4xl font-black text-white mb-4">Executive Summary</h2>
+           <p className="text-lg text-gray-300 leading-relaxed font-medium">{report.feedback}</p>
+         </div>
+       </div>
+
+       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+         <div className="bg-white/5 p-8 rounded-3xl border border-white/5">
+            <h3 className="text-green-400 font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2"><span className="w-2 h-2 bg-green-500 rounded-full"></span> Top Strengths</h3>
+            <ul className="space-y-4">
+              {report.strengths.map((s, i) => <li key={i} className="text-gray-300 font-bold flex gap-3"><span className="text-green-500/50">✓</span> {s}</li>)}
+            </ul>
+         </div>
+         
+         <div className="bg-white/5 p-8 rounded-3xl border border-white/5">
+            <h3 className="text-indigo-400 font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2"><span className="w-2 h-2 bg-indigo-500 rounded-full"></span> Areas for Growth</h3>
+            <ul className="space-y-4">
+              {report.improvements.map((s, i) => <li key={i} className="text-gray-300 font-bold flex gap-3"><span className="text-indigo-500/50">↑</span> {s}</li>)}
+            </ul>
+         </div>
+       </div>
+
+       {report.redFlags.length > 0 && (
+         <div className="bg-red-500/10 p-8 rounded-3xl border border-red-500/20 mb-12">
+             <h3 className="text-red-400 font-black text-xs uppercase tracking-widest mb-6 flex items-center gap-2"><span className="w-2 h-2 bg-red-500 rounded-full"></span> Critical Warning</h3>
+             <ul className="space-y-2">
+               {report.redFlags.map((s, i) => <li key={i} className="text-red-200 font-bold flex gap-3"><span className="text-red-500">!</span> {s}</li>)}
+             </ul>
+         </div>
+       )}
+
+       <button onClick={() => { setReport(null); setTranscript([]); }} className="w-full py-5 bg-white text-black font-black text-xl rounded-2xl hover:bg-gray-200 transition-colors shadow-xl">
+         Start New Session
+       </button>
+    </div>
+  );
 
   return (
     <div className="max-w-3xl mx-auto glass p-10 rounded-[2.5rem] border border-white/10 min-h-[70vh] flex flex-col items-center justify-center text-center">

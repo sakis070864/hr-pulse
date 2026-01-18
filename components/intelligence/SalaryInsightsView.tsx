@@ -4,11 +4,17 @@ import { SalaryData } from '../../types';
 import { getSalaryIntelligence } from '../../services/geminiService';
 import AriaBriefing from '../AriaBriefing';
 
-const SalaryInsightsView: React.FC<{ jobTitle: string; location: string; onBack: () => void }> = ({ jobTitle, location, onBack }) => {
-  const [data, setData] = useState<SalaryData | null>(null);
-  const [loading, setLoading] = useState(true);
+const SalaryInsightsView: React.FC<{ jobTitle: string; location: string; onBack: () => void; cachedData?: SalaryData }> = ({ jobTitle, location, onBack, cachedData }) => {
+  const [data, setData] = useState<SalaryData | null>(cachedData || null);
+  const [loading, setLoading] = useState(!cachedData);
 
   useEffect(() => {
+    if (cachedData) {
+      setData(cachedData);
+      setLoading(false);
+      return;
+    }
+
     getSalaryIntelligence(jobTitle, location).then(res => {
       setData(res);
       setLoading(false);
@@ -16,7 +22,7 @@ const SalaryInsightsView: React.FC<{ jobTitle: string; location: string; onBack:
       console.error(err);
       setLoading(false);
     });
-  }, [jobTitle, location]);
+  }, [jobTitle, location, cachedData]);
 
   const safeRender = (val: any) => {
     if (typeof val === 'string' || typeof val === 'number') return val;

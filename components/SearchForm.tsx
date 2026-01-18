@@ -35,7 +35,7 @@ const SearchForm: React.FC<SearchFormProps> = ({ onSearch, disabled }) => {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Location (e.g. London)"
+              placeholder="Location (e.g. New York, NY)"
               className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-lg"
               value={location}
               onChange={(e) => setLocation(e.target.value)}

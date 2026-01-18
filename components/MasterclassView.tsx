@@ -8,11 +8,12 @@ interface MasterclassViewProps {
   jobTitle: string;
   location: string;
   onBack: () => void;
+  cachedData?: MasterclassData;
 }
 
-const MasterclassView: React.FC<MasterclassViewProps> = ({ question, jobTitle, location, onBack }) => {
-  const [data, setData] = useState<MasterclassData | null>(null);
-  const [loading, setLoading] = useState(true);
+const MasterclassView: React.FC<MasterclassViewProps> = ({ question, jobTitle, location, onBack, cachedData }) => {
+  const [data, setData] = useState<MasterclassData | null>(cachedData || null);
+  const [loading, setLoading] = useState(!cachedData);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
@@ -49,6 +50,12 @@ const MasterclassView: React.FC<MasterclassViewProps> = ({ question, jobTitle, l
     loadVoices(); // Try to load immediately
 
     const fetchContent = async () => {
+      if (cachedData) {
+        setData(cachedData);
+        setLoading(false);
+        return;
+      }
+
       try {
         const result = await getMasterclassContent(question.question, jobTitle, location);
 
@@ -77,7 +84,7 @@ const MasterclassView: React.FC<MasterclassViewProps> = ({ question, jobTitle, l
         window.speechSynthesis.onvoiceschanged = null;
       }
     };
-  }, [question, jobTitle, location]);
+  }, [question, jobTitle, location, cachedData]);
 
 
   const handlePlay = () => {

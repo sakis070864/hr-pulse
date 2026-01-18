@@ -4,11 +4,17 @@ import { CareerPathData } from '../../types';
 import { getCareerPathIntelligence } from '../../services/geminiService';
 import AriaBriefing from '../AriaBriefing';
 
-const CareerPathView: React.FC<{ jobTitle: string; location: string; onBack: () => void }> = ({ jobTitle, location, onBack }) => {
-  const [data, setData] = useState<CareerPathData | null>(null);
-  const [loading, setLoading] = useState(true);
+const CareerPathView: React.FC<{ jobTitle: string; location: string; onBack: () => void; cachedData?: CareerPathData }> = ({ jobTitle, location, onBack, cachedData }) => {
+  const [data, setData] = useState<CareerPathData | null>(cachedData || null);
+  const [loading, setLoading] = useState(!cachedData);
 
   useEffect(() => {
+    if (cachedData) {
+      setData(cachedData);
+      setLoading(false);
+      return;
+    }
+
     getCareerPathIntelligence(jobTitle, location).then(res => {
       setData(res);
       setLoading(false);
@@ -16,7 +22,7 @@ const CareerPathView: React.FC<{ jobTitle: string; location: string; onBack: () 
       console.error(err);
       setLoading(false);
     });
-  }, [jobTitle, location]);
+  }, [jobTitle, location, cachedData]);
 
   if (loading) return <div className="animate-pulse flex flex-col items-center justify-center py-40"><div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div><p className="text-indigo-400 font-black text-[10px] uppercase tracking-widest">Architecting Roadmap...</p></div>;
 

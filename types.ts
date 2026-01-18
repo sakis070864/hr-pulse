@@ -34,6 +34,14 @@ export interface NetworkingData {
   scripts: { platform: string; content: string }[];
 }
 
+export interface SimulationReport {
+  score: number;
+  feedback: string;
+  strengths: string[];
+  improvements: string[];
+  redFlags: string[];
+}
+
 export interface AppState {
   jobTitle: string;
   location: string;
@@ -42,6 +50,11 @@ export interface AppState {
   isLoadingMore: boolean;
   searchProgress: number;
   error: string | null;
+  // Cached Intelligence Data
+  careerPathData?: CareerPathData;
+  salaryData?: SalaryData;
+  networkingData?: NetworkingData;
+  masterclassCache?: Record<string, MasterclassData>;
 }
 
 export type ViewMode = 'SEARCH' | 'RESULTS' | 'MASTERCLASS' | 'TRAINING' | 'SIMULATION' | 'CAREER_PATH' | 'SALARY_INSIGHTS' | 'NETWORKING';

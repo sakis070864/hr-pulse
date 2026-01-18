@@ -4,11 +4,17 @@ import { NetworkingData } from '../../types';
 import { getNetworkingIntelligence } from '../../services/geminiService';
 import AriaBriefing from '../AriaBriefing';
 
-const NetworkingView: React.FC<{ jobTitle: string; location: string; onBack: () => void }> = ({ jobTitle, location, onBack }) => {
-  const [data, setData] = useState<NetworkingData | null>(null);
-  const [loading, setLoading] = useState(true);
+const NetworkingView: React.FC<{ jobTitle: string; location: string; onBack: () => void; cachedData?: NetworkingData }> = ({ jobTitle, location, onBack, cachedData }) => {
+  const [data, setData] = useState<NetworkingData | null>(cachedData || null);
+  const [loading, setLoading] = useState(!cachedData);
 
   useEffect(() => {
+    if (cachedData) {
+      setData(cachedData);
+      setLoading(false);
+      return;
+    }
+
     getNetworkingIntelligence(jobTitle, location).then(res => {
       setData(res);
       setLoading(false);
@@ -16,7 +22,7 @@ const NetworkingView: React.FC<{ jobTitle: string; location: string; onBack: () 
       console.error(err);
       setLoading(false);
     });
-  }, [jobTitle, location]);
+  }, [jobTitle, location, cachedData]);
 
   const safeRender = (val: any) => {
     if (typeof val === 'string' || typeof val === 'number') return val;
