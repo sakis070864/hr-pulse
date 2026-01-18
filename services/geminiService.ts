@@ -3,7 +3,7 @@ import { GoogleGenAI, Type, GenerateContentResponse, Modality } from "@google/ge
 import { InterviewQuestion, MasterclassData, CareerPathData, SalaryData, NetworkingData, SimulationReport } from "../types";
 
 export const getGeminiClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  return new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 };
 
 export const searchInterviewQuestions = async (
