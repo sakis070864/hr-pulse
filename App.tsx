@@ -150,7 +150,7 @@ const App: React.FC = () => {
             return data;
           }),
           getNetworkingIntelligence(jobTitle, location).then(data => {
-            updateProgress('CALIBRATING ELEVENLABS VOICE SYNTHESIS...', 'SCANNING: Meetup.com, Eventbrite, Local Chambers');
+            updateProgress('INITIATING DEEP-WEB RECONNAISSANCE...', 'SCANNING: Meetup.com, Eventbrite, Local Chambers');
             return data;
           })
         ]).then(([careerPath, salary, networking]) => ({ careerPath, salary, networking })),
