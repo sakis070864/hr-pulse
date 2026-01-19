@@ -49,6 +49,8 @@ export interface AppState {
   isSearching: boolean;
   isLoadingMore: boolean;
   searchProgress: number;
+  progressStatus?: string;
+  scanningSource?: string;
   error: string | null;
   // Cached Intelligence Data
   careerPathData?: CareerPathData;

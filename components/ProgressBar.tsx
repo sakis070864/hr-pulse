@@ -3,54 +3,63 @@ import React from 'react';
 
 interface ProgressBarProps {
   progress: number;
+  statusLabel?: string;
+  scanningSource?: string;
 }
 
-const ProgressBar: React.FC<ProgressBarProps> = ({ progress }) => {
+const ProgressBar: React.FC<ProgressBarProps> = ({ progress, statusLabel, scanningSource }) => {
   return (
-    <div className="w-full max-w-xl space-y-6">
-      <div className="flex flex-col items-center gap-3">
+    <div className="w-full max-w-2xl space-y-8 animate-in fade-in duration-500">
+
+      {/* Cinematic Header Text */}
+      <div className="flex flex-col items-center gap-4 text-center">
         <div className="flex items-center gap-3">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
-          <span className="text-[11px] font-black text-white uppercase tracking-[0.8em]">
-            {progress < 25 ? 'ACCESSING_REDDIT_API' : 
-             progress < 50 ? 'PARSING_WSO_FORUMS' :
-             progress < 75 ? 'LINKEDIN_GRAPH_SYNC' :
-             'GLASSDOOR_SALARY_DATA'}
-          </span>
+          <span className="w-3 h-3 rounded-full bg-indigo-500 animate-ping" />
+          <h2 className="text-xl md:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-indigo-300 tracking-widest uppercase shadow-indigo-500/50 drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]">
+            {statusLabel || 'INITIALIZING NEURAL LINK...'}
+          </h2>
         </div>
-        <span className="text-[10px] font-mono text-gray-600 tracking-widest">
-          SEARCHING_DATA_CORES: {Math.round(progress)}%
-        </span>
+
+        <p className="text-xs font-mono text-indigo-400/60 tracking-[0.2em]">
+          DATA_CORE_SYNC: {Math.round(progress)}%
+        </p>
       </div>
-      
-      <div className="relative w-full h-px bg-white/5 overflow-hidden">
-        {/* Main thin tracer */}
-        <div 
-          className="absolute top-0 left-0 h-full bg-indigo-500 transition-all duration-500 ease-out shadow-[0_0_8px_rgba(99,102,241,0.5)]"
-          style={{ width: `${progress}%` }}
+
+      {/* The "Thick" Bar */}
+      <div className="relative w-full h-8 bg-black/40 rounded-full border border-white/10 overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)_inset]">
+
+        {/* Grid Background Pattern */}
+        <div className="absolute inset-0 opacity-20"
+          style={{ backgroundImage: 'linear-gradient(90deg, transparent 95%, rgba(255,255,255,0.2) 100%)', backgroundSize: '20px 100%' }}
         />
-        
-        {/* Neural velocity streak */}
-        <div className="absolute inset-0 w-full h-full pointer-events-none">
-          <div className="absolute top-0 h-full w-40 bg-gradient-to-r from-transparent via-indigo-400/30 to-transparent animate-velocity" />
+
+        {/* Liquid Light Filler */}
+        <div
+          className="absolute top-0 left-0 h-full bg-gradient-to-r from-indigo-600 via-indigo-400 to-indigo-600 transition-all duration-700 ease-out shadow-[0_0_20px_rgba(99,102,241,0.6)]"
+          style={{ width: `${progress}%` }}
+        >
+          {/* Internal Flow Animation */}
+          <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 animate-shimmer" />
         </div>
       </div>
-      
-      <div className="flex justify-between items-center px-2">
-        <div className="flex gap-6">
-           {['REDDIT', 'WSO', 'LI', 'GD'].map((site, i) => {
-             const isActive = progress >= (i * 25) && progress < ((i + 1) * 25);
-             const isDone = progress >= ((i + 1) * 25);
-             
-             return (
-               <div key={site} className={`text-[8px] font-black tracking-[0.4em] transition-all duration-300 ${isActive ? 'text-white scale-110 animate-pulse' : isDone ? 'text-indigo-500' : 'text-gray-800'}`}>
-                 {site}
-               </div>
-             );
-           })}
+
+      {/* Technical Footer (Source Log) */}
+      <div className="flex justify-between items-center px-4 py-3 bg-indigo-950/30 rounded-xl border border-indigo-500/20">
+        <div className="flex items-center gap-3">
+          <span className="text-indigo-400 text-lg animate-pulse">⚡</span>
+          <div className="text-[10px] md:text-xs font-mono text-indigo-300 tracking-wider">
+            {scanningSource ? (
+              <span className="flex gap-2">
+                <span className="opacity-50">TARGET:</span>
+                <span className="font-bold text-white">{scanningSource.replace('TARGETING: ', '').replace('ACCESSING: ', '').replace('>_ ', '')}</span>
+              </span>
+            ) : (
+              <span className="opacity-50">WAITING FOR UPLINK...</span>
+            )}
+          </div>
         </div>
-        <div className="text-[8px] text-gray-800 font-black tracking-widest">
-          GROUNDING_ACTIVE
+        <div className="hidden md:block text-[9px] text-indigo-500/50 font-black tracking-[0.3em]">
+          SECURE_CONNECTION_TLS_1.3
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { AppState, ViewMode, InterviewQuestion } from './types';
-import { searchInterviewQuestions, fetchAllIntelligence, batchFetchMasterclasses } from './services/geminiService';
+import { searchInterviewQuestions, getCareerPathIntelligence, getSalaryIntelligence, getNetworkingIntelligence, batchFetchMasterclasses } from './services/geminiService';
 import Header from './components/Header';
 import SearchForm from './components/SearchForm';
 import ProgressBar from './components/ProgressBar';
@@ -27,6 +27,7 @@ const App: React.FC = () => {
     isSearching: false,
     isLoadingMore: false,
     searchProgress: 0,
+    progressStatus: 'INITIALIZING',
     error: null,
   });
 
@@ -93,55 +94,87 @@ const App: React.FC = () => {
   };
 
   const handleSearch = async (jobTitle: string, location: string) => {
-    setState(prev => ({ 
-      ...prev, 
-      jobTitle, 
-      location, 
-      isSearching: true, 
-      isLoadingMore: false, 
-      searchProgress: 0, 
+    setState(prev => ({
+      ...prev,
+      jobTitle,
+      location,
+      isSearching: true,
+      isLoadingMore: false,
+      searchProgress: 10,
+      progressStatus: 'ESTABLISHING NEURAL LINK WITH GEMINI 3 FLASH...',
+      scanningSource: 'ESTABLISHING_SECURE_HANDSHAKE...',
       error: null,
-      // Clear old cache on new search
       careerPathData: undefined,
       salaryData: undefined,
       networkingData: undefined,
       masterclassCache: undefined
     }));
-    
-    const interval = setInterval(() => {
-      setState(prev => {
-        const inc = prev.searchProgress > 80 ? (Math.random() * 0.5) : (Math.random() * 5);
-        return { ...prev, searchProgress: Math.min(prev.searchProgress + inc, 99) };
-      });
-    }, 150);
 
     try {
-      // Step 1: Get Questions first (we need them to fetch masterclasses)
+      // Step 1: Get Questions first
       const questions = await searchInterviewQuestions(jobTitle, location, NUM_INITIAL_QUESTIONS, 0);
 
-      // Step 2: Parallel Execution - Get ALL Deep Intelligence
-      // We fetch Auxiliary Data AND Masterclass Content for ALL questions simultaneously
+      setState(prev => ({
+        ...prev,
+        searchProgress: 30,
+        progressStatus: 'AUTHENTICATING WITH GLOBAL HR-GRID...',
+        scanningSource: 'TARGETING: reddit.com, teamblind.com, wallstreetoasis.com'
+      }));
+
+      // Step 2: Parallel Execution
+      let completedSteps = 0;
+      const totalSteps = 4; // Career, Salary, Networking, Masterclasses
+
+      const updateProgress = (label: string, source: string) => {
+        completedSteps++;
+        const baseProgress = 30;
+        const remainingScope = 70;
+        const newProgress = baseProgress + ((completedSteps / totalSteps) * remainingScope);
+
+        setState(prev => ({
+          ...prev,
+          searchProgress: Math.min(newProgress, 95),
+          progressStatus: label,
+          scanningSource: source
+        }));
+      };
+
       const [intelligence, masterclassCache] = await Promise.all([
-        fetchAllIntelligence(jobTitle, location),
-        batchFetchMasterclasses(questions, jobTitle, location)
+        Promise.all([
+          getCareerPathIntelligence(jobTitle, location).then(data => {
+            updateProgress('DOWNLOADING REAL-TIME HR MARKET INTELLIGENCE...', 'PARSING: Bureau of Labor Statistics, LinkedIn Trends');
+            return data;
+          }),
+          getSalaryIntelligence(jobTitle, location).then(data => {
+            updateProgress('PARSING REDDIT & BLIND FOR INSIDER LEAKS...', 'ACCESSING: levels.fyi API, Glassdoor, Pave');
+            return data;
+          }),
+          getNetworkingIntelligence(jobTitle, location).then(data => {
+            updateProgress('CALIBRATING ELEVENLABS VOICE SYNTHESIS...', 'SCANNING: Meetup.com, Eventbrite, Local Chambers');
+            return data;
+          })
+        ]).then(([careerPath, salary, networking]) => ({ careerPath, salary, networking })),
+
+        batchFetchMasterclasses(questions, jobTitle, location).then(data => {
+          updateProgress('COMPILING EXECUTIVE BRIEFING...', 'COMPILING: Executive Coaching Protocols, HBR Case Studies');
+          return data;
+        })
       ]);
 
-      clearInterval(interval);
-      
-      setState(prev => ({ 
-        ...prev, 
-        questions, 
-        isSearching: false, 
+      setState(prev => ({
+        ...prev,
+        questions,
+        isSearching: false,
         searchProgress: 100,
+        progressStatus: 'COMPLETE',
         careerPathData: intelligence.careerPath,
         salaryData: intelligence.salary,
         networkingData: intelligence.networking,
-        masterclassCache // Store the giant cache
+        masterclassCache
       }));
-      
+
       setTimeout(() => setViewMode('RESULTS'), 500);
     } catch (err: any) {
-      clearInterval(interval);
       let msg = 'Grounding collision. Please retry.';
       if (err.message === 'RATE_LIMIT_EXCEEDED') msg = 'Quota exhausted. Use a personal key.';
       setState(prev => ({ ...prev, isSearching: false, error: msg }));
@@ -175,10 +208,10 @@ const App: React.FC = () => {
           // SHADOW SYNC: Trigger background fetch for the new unique questions
           if (uniqueMoreResults.length > 0) {
             batchFetchMasterclasses(uniqueMoreResults, state.jobTitle, state.location).then(newCache => {
-               setState(currentState => ({
-                 ...currentState,
-                 masterclassCache: { ...currentState.masterclassCache, ...newCache }
-               }));
+              setState(currentState => ({
+                ...currentState,
+                masterclassCache: { ...currentState.masterclassCache, ...newCache }
+              }));
             });
           }
 
@@ -235,7 +268,7 @@ const App: React.FC = () => {
 
         {state.isSearching && (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
-            <ProgressBar progress={state.searchProgress} />
+            <ProgressBar progress={state.searchProgress} statusLabel={state.progressStatus} scanningSource={state.scanningSource} />
           </div>
         )}
 
