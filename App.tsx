@@ -1,5 +1,5 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
+import { Analytics } from "@vercel/analytics/react";
 import { AppState, ViewMode, InterviewQuestion } from './types';
 import { searchInterviewQuestions, getCareerPathIntelligence, getSalaryIntelligence, getNetworkingIntelligence, batchFetchMasterclasses } from './services/geminiService';
 import Header from './components/Header';
@@ -398,6 +398,7 @@ const App: React.FC = () => {
           <button onClick={handleKeySelection} className="px-4 py-2 bg-white/10 rounded-xl text-[10px] font-black uppercase">Link Project</button>
         </div>
       )}
+      <Analytics />
     </div>
   );
 };
