@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import PasswordPopup from './PasswordPopup';
 
 interface WelcomeModalProps {
     onStart: () => void;
@@ -7,7 +6,6 @@ interface WelcomeModalProps {
 
 const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
     const [show, setShow] = useState(false);
-    const [showPasswordPopup, setShowPasswordPopup] = useState(false);
 
     useEffect(() => {
         // Small delay for entrance animation
@@ -63,17 +61,11 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
                     </div>
 
                     <button
-                        onClick={() => setShowPasswordPopup(true)}
+                        onClick={onStart}
                         className="mt-12 px-16 py-6 bg-white text-black rounded-full font-black text-xl hover:bg-indigo-50 hover:scale-105 active:scale-95 transition-all shadow-[0_0_40px_rgba(255,255,255,0.3)] animate-in fade-in zoom-in duration-700 delay-1000"
                     >
                         Start Training
                     </button>
-
-                    <PasswordPopup
-                        isOpen={showPasswordPopup}
-                        onClose={() => setShowPasswordPopup(false)}
-                        onSuccess={onStart}
-                    />
                 </div>
             </div>
         </div>
@@ -81,3 +73,4 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onStart }) => {
 };
 
 export default WelcomeModal;
+
